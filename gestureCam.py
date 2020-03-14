@@ -53,10 +53,21 @@ class camera():
             upper_red = np.array([255,255,180])
             mask = cv.inRange(hsv, lower_red, upper_red) 
             res = cv.bitwise_and(cropFrame, cropFrame, mask= mask) 
-            edges = cv.Canny(cropFrame,100,200) 
+            edges = cv.Canny(cropFrame,100,200)
 
-            cv.imshow('gesture cam', img)
-            cv.imshow('cropped', edges)
+            contours, heirarchy = cv.findContours(edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+            cv.drawContours(frame, contours, -1, (0,255,0), 3)
+
+            # cv.imshow('gesture cam', img)
+            # cv.imshow('cropped', edges)
+            cv.imshow('contours', frame)
+
+            # filtering
+            # blur =  cv.GaussianBlur(edges, (5,5),0)
+
+            # Display edges in a frame
+            # cv.imshow('Edges', blur)
+
 
             # Press ESC to quit.
             if cv.waitKey(1) == 27:
