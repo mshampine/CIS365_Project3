@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import cv2 as cv
+import tensorflow.keras
 import numpy as np
 import signal
 import sys
@@ -8,7 +9,7 @@ import sys
 #####################################
 # Project 3 : CIS365-01
 # Title: Gesture ANN Camera
-# Descripiton:
+# Description:
 # Date: 2/29/2020
 # Authors: Matt Shampine, Nabeel Vali
 #####################################
@@ -23,51 +24,77 @@ class camera():
     def __init__(self, camNum=0):
         global cam # Global -- so the sighandler can close resources upon ^C.
         cam = cv.VideoCapture(camNum)
-        cv.namedWindow("gesture cam", cv.WINDOW_NORMAL)
+        cv.namedWindow("camera feed") #cv.WINDOW_NORMAL)
         cv.resizeWindow('gesture cam', 800, 800)
-        # Need to move window pos too, top left, center, etc.
+        cv.moveWindow('camera feed', 200, 200)
         self.run()
-        #frame = cv.imread('hand2.jpg', 0)
-        #cv.imshow('Original', frame)
-        #self.drawHandPos(frame)
 
-        #i = 0
-        #while i < 10:
-            #input('Press Enter to capture')
-            #return_value, image = cam.read()
-            #cv.imwrite('opencv'+str(i)+'.png', image)
-            #i += 1
-        #cam.release()
-        #cv.destroyAllWindows()
+    # Something similar to Handy's skin capture histogram method.
+    # Calibrate skin.
+    def skinColorHist():
+        pass
 
     def run(self):
+        # Defines min and max YCrCb skin color. 
+        # Right now this is hard-coded, but my idea was to 
+        # calibrate these values at the start of the program.
+        # That way these values match each person's skin color.
+        minVal = np.array([0,133,77], np.uint8)
+        maxVal = np.array([235,173,127], np.uint8)
+
         while True:
-            ret_val, frame = cam.read()
+            retVal, frame = cam.read()
 
-            # Draw rectangle when hand is identified/track hand.
+            # Draw ROI (region of interest) for skin detection.
             img = cv.rectangle(frame, (100, 100), (300, 350), (0, 255, 0), 3)
-            cropFrame = frame[100:350, 100:300]
 
-            hsv = cv.cvtColor(cropFrame, cv.COLOR_BGR2HSV)
-            lower_red = np.array([30,150,50]) 
-            upper_red = np.array([255,255,180])
-            mask = cv.inRange(hsv, lower_red, upper_red) 
-            res = cv.bitwise_and(cropFrame, cropFrame, mask= mask) 
-            edges = cv.Canny(cropFrame,100,200)
+            # 5x5 pixel padding, so boarder isnt in cropped image.
+            cropFrame = frame[105:345, 105:295]
 
-            contours, heirarchy = cv.findContours(edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-            cv.drawContours(frame, contours, -1, (0,255,0), 3)
+            # Image preproccessing.
+            preImage = cv.GaussianBlur(cropFrame, (5,5), 0)
 
-            # cv.imshow('gesture cam', img)
-            # cv.imshow('cropped', edges)
-            cv.imshow('contours', frame)
+            # Convert frame to YCrCb, contains more usable information.
+            imageYCrCb = cv.cvtColor(preImage, cv.COLOR_BGR2YCR_CB)
 
-            # filtering
-            # blur =  cv.GaussianBlur(edges, (5,5),0)
+            # Find pixels in range of targeted skin value.
+            skinRegion = cv.inRange(imageYCrCb, minVal, maxVal)
 
-            # Display edges in a frame
-            # cv.imshow('Edges', blur)
+            # Segment hand pixels from rest of frame.
+            skinYCrCb = cv.bitwise_and(preImage, preImage, mask = skinRegion)
+            
+            # Now convert frame to gray to determine bright spots.
+            grayFrame = cv.cvtColor(preImage, cv.COLOR_BGR2GRAY)
+            brtThresh = cv.threshold(grayFrame, 200, 255, cv.THRESH_BINARY)[1]
 
+            # More image processing.
+            brtThresh = cv.erode(brtThresh, None, iterations=2)
+            brtThresh = cv.dilate(brtThresh, None, iterations=4)
+
+            # Not exactly sure if this line improves image processing.
+            brtThresh = cv.morphologyEx(brtThresh, cv.MORPH_CLOSE, None)
+
+            # Combine skin with highlighted skin.
+            skinHighlights = cv.bitwise_and(cropFrame, cropFrame, mask = brtThresh)
+            skin = skinYCrCb | skinHighlights
+            skinCopy = skin.copy()
+
+            grayImg = cv.cvtColor(skin, cv.COLOR_BGR2GRAY)
+            ret, thresh2 = cv.threshold(grayImg, 127, 255, 0)
+            contours, hierarchy = cv.findContours(thresh2, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+            # Draws contour outline of matching skin pixels.
+            skin = cv.drawContours(skin, contours, -1, (0,255,0), 3)
+
+            # Get frame with background and skin with contours applied.
+            skinROI = cropFrame | skin
+
+            # Replace the current frame's ROI with contour applied.
+            frame[105:345, 105:295,:] = skinROI
+
+            cv.imshow('camera feed', frame)
+            cv.imshow('highlights', skinHighlights)
+            cv.imshow('skin', skinCopy)
 
             # Press ESC to quit.
             if cv.waitKey(1) == 27:
@@ -76,22 +103,6 @@ class camera():
         # Close resources
         cam.release()
         cv.destroyAllWindows()
-
-    # Draws and tracks hand position when identified.
-    def drawHandPos(self, frame): 
-        ret, thresh = cv.threshold(frame, 10, 255, cv.THRESH_BINARY)
-        contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        cnt = contours[0]
-        M = cv.moments(cnt)
-
-        hull = [cv.convexHull(c) for c in contours]
-        final = cv.drawContours(frame, hull, -1, (255, 255, 255))
-
-        cv.imshow('Thresh', thresh)
-        cv.imshow('Convex Hull', frame)
-        cv.waitKey(0)
-
-        print(M)
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, sig_handler)
