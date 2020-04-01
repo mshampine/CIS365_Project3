@@ -1,3 +1,5 @@
 env/
+profile1.txt
 *.png
 *.jpg
+*.h5

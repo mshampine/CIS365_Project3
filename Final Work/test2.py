@@ -23,12 +23,14 @@ test_dir = os.path.join(base_dir, 'Test')
 
 # Append each classes training path to the base training path
 train_FlatHand_dir = os.path.join(train_dir, "FlatHand")
-train_Fist_dir = os.path.join(train_dir, "Fist" )
+#train_Fist_dir = os.path.join(train_dir, "Fist" )
+train_Thumbs_dir = os.path.join(train_dir, "Thumbs")
 train_BlankWall_dir = os.path.join(train_dir, "BlankWall")
 
 # Append each classes testing path to the base test path
 test_FlatHand_dir = os.path.join(test_dir, "FlatHand")
-test_Fist_dir = os.path.join(test_dir, "Fist")
+#test_Fist_dir = os.path.join(test_dir, "Fist")
+test_Thumbs_dir = os.path.join(test_dir, "Thumbs")
 test_BlankWall_dir = os.path.join(test_dir, "BlankWall")
 
 
@@ -66,7 +68,7 @@ model = tf.keras.models.Sequential([
     tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Flatten(),
     tf.keras.layers.Dense(128, activation='relu', kernel_initializer='he_uniform'),
-    tf.keras.layers.Dense(4, activation="softmax")
+    tf.keras.layers.Dense(3, activation="softmax")
 ])
 
 # Optimizer used: Stochastic Gradient Descent
@@ -80,10 +82,10 @@ model.compile(optimizer=optimizer,
 # Train the model using the training data, validate it with our test data
 model.fit(train_generator,
       shuffle=True,
-      epochs=5,
+      epochs=3,
       validation_data=test_generator,
       verbose=1,
 )
 
+model.save('finalModel.h5')
 
-#model.save('finalModel.h5')
