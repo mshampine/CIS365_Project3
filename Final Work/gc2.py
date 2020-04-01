@@ -21,7 +21,7 @@ np.set_printoptions(suppress=True)
 model = tensorflow.keras.models.load_model('my_model_final.h5')
 
 
-def sig_handler():
+def sig_handler(signal, frame):
     """
     Handles CTRL-C interrupt to cleanly terminate the program
     :return: None
