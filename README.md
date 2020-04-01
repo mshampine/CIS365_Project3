@@ -25,6 +25,8 @@ To use when more than one camera is connected (Default camera is 0).
 
 ### Resources
 [OpenCV Python API](https://docs.opencv.org/master/d6/d00/tutorial_py_root.html)
+
 [Python tensorflow API](https://www.tensorflow.org/tutorials/keras/classification)
+
 [PyAutoGUI API](https://pyautogui.readthedocs.io/en/latest/)
 
