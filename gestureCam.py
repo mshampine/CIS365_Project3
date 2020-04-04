@@ -93,7 +93,7 @@ class camera():
             frame[105:345, 105:295,:] = skinROI
 
             cv.imshow('camera feed', frame)
-            cv.imshow('highlights', skinHighlights)
+            #cv.imshow('highlights', skinHighlights)
             cv.imshow('skin', skinCopy)
 
             # Press ESC to quit.
